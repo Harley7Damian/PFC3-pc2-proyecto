@@ -1,12 +1,20 @@
 {% extends "base.html" %}
 {% block titulo %}Reportar incidente | CicloSeguro Lima{% endblock %}
+{% block cabecera_pagina %}
+<section class="banner-pagina banner-rojo"><div class="contenedor"><p class="etiqueta"><svg class="icono"><use href="#i-alerta"/></svg> Reporte</p><h1>Reportar un incidente</h1><p>Tu aviso ayuda a otras personas a elegir mejor su ruta.</p></div></section>
+{% endblock %}
 {% block contenido %}
-<h1>Reportar un incidente</h1>
-<form method="post" class="formulario" novalidate>
-  {% csrf_token %}
-  {% for campo in formulario %}
-  <p><label for="{{ campo.id_for_label }}">{{ campo.label }}</label> {{ campo }}{% for e in campo.errors %}<span class="error">{{ e }}</span>{% endfor %}</p>
-  {% endfor %}
-  <button type="submit" class="boton">Enviar reporte</button>
-</form>
+<section class="tarjeta-form tarjeta-centrada">
+  <form method="post" class="formulario" novalidate>
+    {% csrf_token %}
+    {% for campo in formulario %}
+    <div class="campo{% if campo.errors %} campo-error{% endif %}">
+      <label for="{{ campo.id_for_label }}">{{ campo.label }}</label>
+      {{ campo }}
+      {% for e in campo.errors %}<span class="error">{{ e }}</span>{% endfor %}
+    </div>
+    {% endfor %}
+    <button type="submit" class="boton boton-primario boton-ancho">Enviar reporte</button>
+  </form>
+</section>
 {% endblock %}

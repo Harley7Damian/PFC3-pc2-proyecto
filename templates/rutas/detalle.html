@@ -1,21 +1,43 @@
 {% extends "base.html" %}
 {% block titulo %}{{ ruta.nombre }} | CicloSeguro Lima{% endblock %}
+{% block cabecera_pagina %}
+<section class="banner-pagina banner-verde"><div class="contenedor">
+  <p class="etiqueta"><svg class="icono"><use href="#i-ruta"/></svg> Detalle de ruta</p>
+  <h1>{{ ruta.nombre }}</h1>
+  <p>{{ ruta.get_distrito_origen_display }} <svg class="icono"><use href="#i-flecha"/></svg> {{ ruta.get_distrito_destino_display }}</p>
+</div></section>
+{% endblock %}
 {% block contenido %}
-<h1>{{ ruta.nombre }}</h1>
-<p>{{ ruta.get_distrito_origen_display }} a {{ ruta.get_distrito_destino_display }} · {{ ruta.longitud_km }} km · {{ ruta.get_estado_ciclovia_display }}</p>
-<p><span class="nivel nivel-{{ ruta.nivel_seguridad }}">Nivel de seguridad: {{ ruta.etiqueta_nivel }}</span>
-  {% if ruta.puntaje_promedio %}Puntaje de usuarios: {{ ruta.puntaje_promedio|floatformat:1 }} de 5{% else %}Aún sin calificaciones{% endif %}</p>
-<p>{{ ruta.descripcion }}</p>
-<h2>Calificar esta ruta</h2>
-{% if user.is_authenticated %}
-<form method="post" action="{% url 'rutas:calificar' ruta.pk %}" class="formulario" novalidate>
-  {% csrf_token %}
-  {% for campo in formulario %}
-  <p><label for="{{ campo.id_for_label }}">{{ campo.label }}</label> {{ campo }}{% for e in campo.errors %}<span class="error">{{ e }}</span>{% endfor %}</p>
-  {% endfor %}
-  <button type="submit" class="boton">Enviar calificación</button>
-</form>
-{% else %}<p><a href="{% url 'cuentas:ingresar' %}?next={{ request.path }}">Ingrese</a> para calificar.</p>{% endif %}
-<h2>Comentarios recientes</h2>
-{% for c in calificaciones %}<p><strong>{{ c.puntaje }}/5</strong> {{ c.comentario }}</p>{% empty %}<p>Todavía no hay comentarios.</p>{% endfor %}
+<div class="detalle-grid">
+  <section class="tarjeta-info">
+    <p><span class="nivel nivel-{{ ruta.nivel_seguridad }}">Nivel de seguridad: {{ ruta.etiqueta_nivel }}</span></p>
+    <dl class="datos-lista">
+      <div><dt>Longitud</dt><dd>{{ ruta.longitud_km }} km</dd></div>
+      <div><dt>Ciclovía</dt><dd>{{ ruta.get_estado_ciclovia_display }}</dd></div>
+      <div><dt>Calificación</dt><dd>{% if ruta.puntaje_promedio %}<svg class="icono estrella"><use href="#i-estrella"/></svg> {{ ruta.puntaje_promedio|floatformat:1 }} de 5{% else %}Aún sin calificaciones{% endif %}</dd></div>
+    </dl>
+    <p>{{ ruta.descripcion }}</p>
+    <h2>Comentarios recientes</h2>
+    {% for c in calificaciones %}<p class="comentario"><strong>{{ c.puntaje }}/5</strong> {{ c.comentario }}</p>{% empty %}<p class="ayuda">Todavía no hay comentarios.</p>{% endfor %}
+  </section>
+  <section class="tarjeta-form">
+    <h2>Califica esta ruta</h2>
+    {% if user.is_authenticated %}
+    <form method="post" action="{% url 'rutas:calificar' ruta.pk %}" class="formulario" novalidate>
+      {% csrf_token %}
+      {% for campo in formulario %}
+      <div class="campo{% if campo.errors %} campo-error{% endif %}">
+        <label {% if campo.field.widget.input_type != 'radio' %}for="{{ campo.id_for_label }}"{% endif %}>{{ campo.label }}</label>
+        {{ campo }}
+        {% for e in campo.errors %}<span class="error">{{ e }}</span>{% endfor %}
+      </div>
+      {% endfor %}
+      <button type="submit" class="boton boton-primario boton-ancho">Enviar calificación</button>
+    </form>
+    {% else %}
+    <p>Ingresa para compartir tu experiencia en esta ruta.</p>
+    <a class="boton boton-primario boton-ancho" href="{% url 'cuentas:ingresar' %}?next={{ request.path }}">Ingresar</a>
+    {% endif %}
+  </section>
+</div>
 {% endblock %}

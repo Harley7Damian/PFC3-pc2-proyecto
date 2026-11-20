@@ -92,3 +92,24 @@ class IncidentesTests(TestCase):
 
     def test_texto_del_modelo(self):
         self.assertIn("Miraflores", str(crear_incidente()))
+
+
+class PanelGraficoTests(TestCase):
+    def test_dona_por_tipo_suma_cien(self):
+        crear_incidente(tipo="robo")
+        crear_incidente(tipo="robo", descripcion="Otro robo en la zona")
+        crear_incidente(tipo="accidente", descripcion="Choque leve en el cruce")
+        crear_incidente(tipo="invasion", descripcion="Vehículo sobre la ciclovía")
+        r = self.client.get(reverse("incidentes:panel"))
+        por_tipo = r.context["por_tipo"]
+        self.assertEqual([t["tipo"] for t in por_tipo][0], "robo")
+        self.assertAlmostEqual(sum(float(t["pct"]) for t in por_tipo), 100, delta=0.1)
+        self.assertEqual(r.context["total"], 4)
+        self.assertEqual(r.context["tipo_principal"], "Robo o intento de robo")
+        self.assertContains(r, "stroke-dasharray")
+        self.assertNotContains(r, "stroke-dasharray=\"50,00")
+
+    def test_panel_sin_datos_no_muestra_dona(self):
+        r = self.client.get(reverse("incidentes:panel"))
+        self.assertEqual(r.context["por_tipo"], [])
+        self.assertNotContains(r, "dona-seg")

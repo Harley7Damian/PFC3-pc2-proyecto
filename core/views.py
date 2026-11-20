@@ -8,7 +8,9 @@ from rutas.models import Ruta
 
 
 def inicio(request):
+    rutas = sorted(Ruta.objects.filter(activa=True), key=lambda r: r.nivel_seguridad(), reverse=True)
     contexto = {
+        "rutas_destacadas": rutas[:3],
         "total_rutas": Ruta.objects.filter(activa=True).count(),
         "total_incidentes": Incidente.objects.filter(visible=True).count(),
         "total_estacionamientos": Estacionamiento.objects.filter(aprobado=True).count(),

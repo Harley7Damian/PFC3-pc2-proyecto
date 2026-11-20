@@ -1,16 +1,33 @@
 {% extends "base.html" %}
 {% block titulo %}Ingresar | CicloSeguro Lima{% endblock %}
 {% block contenido %}
-<h1>Ingresar</h1>
-<form method="post" class="formulario" novalidate>
-  {% csrf_token %}
-  {{ form.non_field_errors }}
-  <p><label for="{{ form.username.id_for_label }}">Correo electrónico</label>
-    <input type="email" name="username" id="{{ form.username.id_for_label }}" maxlength="254" autocomplete="username" required></p>
-  <p><label for="{{ form.password.id_for_label }}">Contraseña</label>
-    <input type="password" name="password" id="{{ form.password.id_for_label }}" autocomplete="current-password" required></p>
-  <input type="hidden" name="next" value="{{ next }}">
-  <button type="submit" class="boton">Ingresar</button>
-</form>
-<p>¿No tiene cuenta? <a href="{% url 'cuentas:registro' %}">Cree una</a>.</p>
+<div class="auth">
+  <aside class="auth-lateral">
+    <h2>Bienvenida de nuevo</h2>
+    <p>Ingresa para calificar rutas, reportar incidentes y registrar estacionamientos.</p>
+    <ul>
+      <li><svg class="icono"><use href="#i-candado"/></svg> Contraseñas protegidas con hash</li>
+      <li><svg class="icono"><use href="#i-escudo"/></svg> Bloqueo ante intentos fallidos</li>
+      <li><svg class="icono"><use href="#i-check"/></svg> Sesión con cookies seguras</li>
+    </ul>
+  </aside>
+  <section class="tarjeta-form">
+    <h1>Ingresar</h1>
+    <form method="post" class="formulario" novalidate>
+      {% csrf_token %}
+      {% if form.non_field_errors %}<div class="error-caja" role="alert">{{ form.non_field_errors }}</div>{% endif %}
+      <div class="campo">
+        <label for="{{ form.username.id_for_label }}">Correo electrónico</label>
+        <input type="email" name="username" id="{{ form.username.id_for_label }}" maxlength="254" autocomplete="username" placeholder="nombre@correo.com" required>
+      </div>
+      <div class="campo">
+        <label for="{{ form.password.id_for_label }}">Contraseña</label>
+        <input type="password" name="password" id="{{ form.password.id_for_label }}" autocomplete="current-password" required>
+      </div>
+      <input type="hidden" name="next" value="{{ next }}">
+      <button type="submit" class="boton boton-primario boton-ancho">Ingresar</button>
+    </form>
+    <p class="pie-form">¿No tienes cuenta? <a href="{% url 'cuentas:registro' %}">Crea una</a></p>
+  </section>
+</div>
 {% endblock %}

@@ -1,13 +1,103 @@
 {% extends "base.html" %}
-{% block contenido %}
-<section class="portada">
-  <h1>Muévete en bicicleta por Lima con más información</h1>
-  <p>Consulta rutas ciclistas, reporta incidentes y encuentra estacionamientos seguros para tu bicicleta.</p>
-  <p><a class="boton" href="{% url 'rutas:lista' %}">Ver rutas</a> <a class="boton secundario" href="{% url 'incidentes:panel' %}">Ver panel de riesgo</a></p>
+{% block cabecera_pagina %}
+<section class="hero">
+  <div class="contenedor hero-grid">
+    <div class="hero-texto">
+      <p class="etiqueta"><svg class="icono"><use href="#i-escudo"/></svg> Hecho para ciclistas de Lima</p>
+      <h1>Pedalea por Lima sabiendo <span class="resalte">por dónde ir</span></h1>
+      <p class="hero-sub">Consulta rutas con su nivel de seguridad, revisa las zonas de riesgo reportadas por la comunidad y encuentra dónde dejar tu bicicleta con tranquilidad.</p>
+      <div class="hero-botones">
+        <a class="boton boton-ambar" href="{% url 'rutas:lista' %}">Explorar rutas <svg class="icono"><use href="#i-flecha"/></svg></a>
+        <a class="boton boton-borde" href="{% url 'incidentes:panel' %}">Ver panel de riesgo</a>
+      </div>
+      <ul class="hero-puntos">
+        <li><svg class="icono"><use href="#i-check"/></svg> Reportes de la comunidad</li>
+        <li><svg class="icono"><use href="#i-check"/></svg> Cuentas protegidas</li>
+        <li><svg class="icono"><use href="#i-check"/></svg> Gratis y abierto</li>
+      </ul>
+    </div>
+    <div class="hero-arte" aria-hidden="true">
+      <svg viewBox="0 0 520 380" role="img" aria-label="Ciclista recorriendo una ciclovía con la ciudad de fondo">
+        <defs>
+          <linearGradient id="cielo" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fde68a" stop-opacity=".9"/><stop offset="1" stop-color="#5eead4" stop-opacity=".15"/></linearGradient>
+        </defs>
+        <circle cx="400" cy="90" r="56" fill="url(#cielo)"/>
+        <g fill="#0b3b36" opacity=".55">
+          <rect x="20" y="190" width="44" height="120"/><rect x="70" y="160" width="52" height="150"/><rect x="130" y="205" width="40" height="105"/>
+          <rect x="180" y="140" width="60" height="170"/><rect x="250" y="185" width="46" height="125"/><rect x="306" y="165" width="56" height="145"/>
+          <rect x="372" y="200" width="44" height="110"/><rect x="424" y="175" width="70" height="135"/>
+        </g>
+        <g fill="#134e4a" opacity=".9">
+          <rect x="34" y="215" width="8" height="10"/><rect x="48" y="215" width="8" height="10"/><rect x="86" y="190" width="8" height="10"/><rect x="104" y="190" width="8" height="10"/>
+          <rect x="196" y="170" width="8" height="10"/><rect x="216" y="170" width="8" height="10"/><rect x="196" y="196" width="8" height="10"/><rect x="216" y="196" width="8" height="10"/>
+          <rect x="322" y="195" width="8" height="10"/><rect x="340" y="195" width="8" height="10"/><rect x="440" y="205" width="8" height="10"/><rect x="460" y="205" width="8" height="10"/>
+        </g>
+        <rect x="0" y="310" width="520" height="70" fill="#042f2e"/>
+        <rect x="0" y="328" width="520" height="8" fill="#14b8a6"/>
+        <g fill="#f8fafc" opacity=".85"><rect x="20" y="352" width="46" height="5" rx="2"/><rect x="120" y="352" width="46" height="5" rx="2"/><rect x="220" y="352" width="46" height="5" rx="2"/><rect x="320" y="352" width="46" height="5" rx="2"/><rect x="420" y="352" width="46" height="5" rx="2"/></g>
+        <g fill="none" stroke="#f8fafc" stroke-width="7" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="190" cy="296" r="46"/><circle cx="350" cy="296" r="46"/>
+          <path d="M190 296l54-98h74l32 98M244 198h-22M318 198l-48 98M300 170h40"/>
+        </g>
+        <g fill="#f59e0b"><circle cx="268" cy="150" r="20"/><path d="M252 176c12-8 36-8 48 4l14 18-26 12-14-12z"/></g>
+        <g stroke="#f59e0b" stroke-width="9" stroke-linecap="round" fill="none"><path d="M262 196l16 40 26 22M296 192l24 6"/></g>
+      </svg>
+    </div>
+  </div>
 </section>
-<section class="tarjetas">
-  <a class="tarjeta" href="{% url 'rutas:lista' %}"><strong>{{ total_rutas }}</strong><span>rutas ciclistas</span></a>
-  <a class="tarjeta" href="{% url 'incidentes:lista' %}"><strong>{{ total_incidentes }}</strong><span>incidentes reportados</span></a>
-  <a class="tarjeta" href="{% url 'estacionamientos:lista' %}"><strong>{{ total_estacionamientos }}</strong><span>estacionamientos seguros</span></a>
+{% endblock %}
+
+{% block contenido %}
+<section class="kpis" aria-label="Resumen de la plataforma">
+  <a class="kpi" href="{% url 'rutas:lista' %}"><span class="kpi-icono tono-verde"><svg class="icono"><use href="#i-ruta"/></svg></span><strong>{{ total_rutas }}</strong><span>rutas ciclistas</span></a>
+  <a class="kpi" href="{% url 'incidentes:lista' %}"><span class="kpi-icono tono-rojo"><svg class="icono"><use href="#i-alerta"/></svg></span><strong>{{ total_incidentes }}</strong><span>incidentes reportados</span></a>
+  <a class="kpi" href="{% url 'estacionamientos:lista' %}"><span class="kpi-icono tono-ambar"><svg class="icono"><use href="#i-estac"/></svg></span><strong>{{ total_estacionamientos }}</strong><span>estacionamientos seguros</span></a>
+</section>
+
+<section class="bloque">
+  <h2 class="titulo-seccion">Lo que hoy falta, lo resolvemos aquí</h2>
+  <p class="sub-seccion">Las ciclovías están fragmentadas, hay poca información sobre zonas de riesgo y faltan lugares seguros para dejar la bicicleta.</p>
+  <div class="rejilla-3">
+    <article class="valor"><span class="valor-icono tono-verde"><svg class="icono"><use href="#i-ruta"/></svg></span><h3>Rutas con nivel de seguridad</h3><p>Compara recorridos entre distritos según el estado de la ciclovía y la calificación de otros ciclistas.</p></article>
+    <article class="valor"><span class="valor-icono tono-rojo"><svg class="icono"><use href="#i-alerta"/></svg></span><h3>Zonas de riesgo visibles</h3><p>Robos, accidentes y vías en mal estado reportados por la comunidad, resumidos en un panel por distrito.</p></article>
+    <article class="valor"><span class="valor-icono tono-ambar"><svg class="icono"><use href="#i-estac"/></svg></span><h3>Estacionamientos seguros</h3><p>Encuentra bicicleteros con vigilancia, capacidad y tipo, filtrados por distrito.</p></article>
+  </div>
+</section>
+
+{% if rutas_destacadas %}
+<section class="bloque">
+  <div class="bloque-cab"><h2 class="titulo-seccion">Rutas destacadas</h2><a class="enlace-flecha" href="{% url 'rutas:lista' %}">Ver todas <svg class="icono"><use href="#i-flecha"/></svg></a></div>
+  <div class="rejilla-3">
+    {% for r in rutas_destacadas %}
+    <a class="tarjeta-ruta" href="{% url 'rutas:detalle' r.pk %}">
+      <span class="nivel nivel-{{ r.nivel_seguridad }}">{{ r.etiqueta_nivel }}</span>
+      <h3>{{ r.nombre }}</h3>
+      <p class="trayecto">{{ r.get_distrito_origen_display }} <svg class="icono"><use href="#i-flecha"/></svg> {{ r.get_distrito_destino_display }}</p>
+      <p class="datos"><span>{{ r.longitud_km }} km</span><span>{{ r.get_estado_ciclovia_display }}</span></p>
+    </a>
+    {% endfor %}
+  </div>
+</section>
+{% endif %}
+
+<section class="bloque">
+  <h2 class="titulo-seccion">Cómo funciona</h2>
+  <ol class="pasos">
+    <li><span class="paso-num">1</span><h3>Elige tu ruta</h3><p>Filtra por distrito y revisa su nivel de seguridad.</p></li>
+    <li><span class="paso-num">2</span><h3>Mira el riesgo</h3><p>Consulta el panel y los incidentes recientes de la zona.</p></li>
+    <li><span class="paso-num">3</span><h3>Aporta a la comunidad</h3><p>Crea tu cuenta, califica rutas y reporta lo que ocurre.</p></li>
+  </ol>
+</section>
+
+<section class="banner-cta">
+  <div>
+    <h2>{% if user.is_authenticated %}¿Viste algo en tu recorrido?{% else %}Súmate a la comunidad de ciclistas{% endif %}</h2>
+    <p>{% if user.is_authenticated %}Tu reporte ayuda a que otras personas elijan mejor su ruta.{% else %}Crea tu cuenta para calificar rutas, reportar incidentes y registrar estacionamientos.{% endif %}</p>
+  </div>
+  {% if user.is_authenticated %}
+  <a class="boton boton-ambar" href="{% url 'incidentes:nuevo' %}">Reportar un incidente</a>
+  {% else %}
+  <a class="boton boton-ambar" href="{% url 'cuentas:registro' %}">Crear cuenta gratis</a>
+  {% endif %}
 </section>
 {% endblock %}

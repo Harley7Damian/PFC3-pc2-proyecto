@@ -1,18 +1,31 @@
 {% extends "base.html" %}
 {% block titulo %}Crear cuenta | CicloSeguro Lima{% endblock %}
 {% block contenido %}
-<h1>Crear cuenta</h1>
-<form method="post" class="formulario" novalidate>
-  {% csrf_token %}
-  {% for campo in formulario %}
-    <p>
-      <label for="{{ campo.id_for_label }}">{{ campo.label }}</label>
-      {{ campo }}
-      {% for error in campo.errors %}<span class="error">{{ error }}</span>{% endfor %}
-    </p>
-  {% endfor %}
-  <p class="ayuda">La contraseña debe tener al menos 10 caracteres, no ser común ni solo numérica.</p>
-  <button type="submit" class="boton">Crear cuenta</button>
-</form>
-<p>¿Ya tiene cuenta? <a href="{% url 'cuentas:ingresar' %}">Ingrese</a>.</p>
+<div class="auth">
+  <aside class="auth-lateral">
+    <h2>Únete a la comunidad</h2>
+    <p>Tu cuenta te permite aportar información para que más personas pedaleen con seguridad.</p>
+    <ul>
+      <li><svg class="icono"><use href="#i-estrella"/></svg> Califica rutas</li>
+      <li><svg class="icono"><use href="#i-alerta"/></svg> Reporta incidentes</li>
+      <li><svg class="icono"><use href="#i-estac"/></svg> Registra estacionamientos</li>
+    </ul>
+  </aside>
+  <section class="tarjeta-form">
+    <h1>Crear cuenta</h1>
+    <form method="post" class="formulario" novalidate>
+      {% csrf_token %}
+      {% for campo in formulario %}
+      <div class="campo{% if campo.errors %} campo-error{% endif %}">
+        <label for="{{ campo.id_for_label }}">{{ campo.label }}</label>
+        {{ campo }}
+        {% for error in campo.errors %}<span class="error">{{ error }}</span>{% endfor %}
+      </div>
+      {% endfor %}
+      <p class="ayuda">La contraseña debe tener al menos 10 caracteres, no ser común ni solo numérica.</p>
+      <button type="submit" class="boton boton-primario boton-ancho">Crear cuenta</button>
+    </form>
+    <p class="pie-form">¿Ya tienes cuenta? <a href="{% url 'cuentas:ingresar' %}">Ingresa</a></p>
+  </section>
+</div>
 {% endblock %}

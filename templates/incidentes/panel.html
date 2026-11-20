@@ -1,13 +1,41 @@
 {% extends "base.html" %}
 {% block titulo %}Panel de riesgo | CicloSeguro Lima{% endblock %}
+{% block cabecera_pagina %}
+<section class="banner-pagina banner-azul"><div class="contenedor"><p class="etiqueta"><svg class="icono"><use href="#i-grafico"/></svg> Panel</p><h1>Panel de riesgo por distrito</h1><p>Últimos {{ dias }} días. Robos y accidentes suman 3 puntos; los demás incidentes, 1 punto.</p></div></section>
+{% endblock %}
 {% block contenido %}
-<h1>Panel de riesgo por distrito</h1>
-<p>Últimos {{ dias }} días. Robos y accidentes suman 3 puntos; los demás incidentes, 1 punto.</p>
-{% for d in datos %}
-<div class="barra-riesgo">
-  <span class="etiqueta">{{ d.distrito }}</span>
-  <progress class="riesgo-{{ d.clase }}" max="100" value="{{ d.ancho }}">{{ d.puntos }}</progress>
-  <span>{{ d.puntos }} puntos · {{ d.total }} reportes · {{ d.etiqueta }}</span>
+{% if datos %}
+<section class="kpis">
+  <div class="kpi"><span class="kpi-icono tono-azul"><svg class="icono"><use href="#i-grafico"/></svg></span><strong>{{ total }}</strong><span>reportes en {{ dias }} días</span></div>
+  <div class="kpi"><span class="kpi-icono tono-rojo"><svg class="icono"><use href="#i-alerta"/></svg></span><strong class="kpi-texto">{{ datos.0.distrito }}</strong><span>distrito con más riesgo</span></div>
+  <div class="kpi"><span class="kpi-icono tono-ambar"><svg class="icono"><use href="#i-escudo"/></svg></span><strong class="kpi-texto">{{ tipo_principal }}</strong><span>tipo más frecuente</span></div>
+</section>
+<div class="panel-grid">
+  <section class="tarjeta-info">
+    <h2>Incidentes por tipo</h2>
+    <div class="dona-caja">
+      <svg class="dona" viewBox="0 0 42 42" role="img" aria-label="Distribución de incidentes por tipo">
+        <circle class="dona-fondo" cx="21" cy="21" r="15.9155"/>
+        {% for t in por_tipo %}<circle class="dona-seg dona-{{ t.tipo }}" cx="21" cy="21" r="15.9155" stroke-dasharray="{{ t.pct }} {{ t.resto }}" stroke-dashoffset="{{ t.offset }}"/>{% endfor %}
+        <text x="21" y="22.5" class="dona-numero" text-anchor="middle">{{ total }}</text>
+      </svg>
+      <ul class="leyenda">
+        {% for t in por_tipo %}<li><i class="punto dona-{{ t.tipo }}"></i>{{ t.etiqueta }} <strong>{{ t.total }}</strong></li>{% endfor %}
+      </ul>
+    </div>
+  </section>
+  <section class="tarjeta-info">
+    <h2>Riesgo por distrito</h2>
+    {% for d in datos %}
+    <div class="barra-riesgo">
+      <span class="etiqueta-barra">{{ d.distrito }}</span>
+      <progress class="riesgo-{{ d.clase }}" max="100" value="{{ d.ancho }}">{{ d.puntos }}</progress>
+      <span class="detalle-barra"><span class="chip chip-{{ d.clase }}">{{ d.etiqueta }}</span> {{ d.puntos }} punto{{ d.puntos|pluralize }} · {{ d.total }} reporte{{ d.total|pluralize }}</span>
+    </div>
+    {% endfor %}
+  </section>
 </div>
-{% empty %}<p>No hay incidentes recientes.</p>{% endfor %}
+{% else %}
+<section class="vacio"><svg class="icono icono-grande"><use href="#i-escudo"/></svg><p>No hay incidentes recientes.</p></section>
+{% endif %}
 {% endblock %}
