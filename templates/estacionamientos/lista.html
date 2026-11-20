@@ -1,20 +1,27 @@
 {% extends "base.html" %}
 {% block titulo %}Estacionamientos | CicloSeguro Lima{% endblock %}
+{% block cabecera_pagina %}
+<section class="banner-pagina banner-ambar"><div class="contenedor"><p class="etiqueta"><svg class="icono"><use href="#i-estac"/></svg> Estacionamientos</p><h1>Estacionamientos seguros para bicicletas</h1><p>Encuentra dónde dejar tu bicicleta con vigilancia y capacidad.</p></div></section>
+{% endblock %}
 {% block contenido %}
-<h1>Estacionamientos seguros para bicicletas</h1>
-<p><a class="boton" href="{% url 'estacionamientos:nuevo' %}">Registrar un estacionamiento</a></p>
+<div class="acciones-fila"><a class="boton boton-primario" href="{% url 'estacionamientos:nuevo' %}"><svg class="icono"><use href="#i-estac"/></svg> Registrar un estacionamiento</a></div>
 <form method="get" class="filtros">
   <label for="distrito">Distrito</label>
   <select name="distrito" id="distrito"><option value="">Todos</option>
     {% for clave, nombre in distritos %}<option value="{{ clave }}" {% if clave == distrito %}selected{% endif %}>{{ nombre }}</option>{% endfor %}</select>
-  <label><input type="checkbox" name="vigilado" value="1" {% if solo_vigilados %}checked{% endif %}> Solo con vigilancia 24 horas</label>
-  <button type="submit" class="boton">Filtrar</button>
+  <label class="casilla"><input type="checkbox" name="vigilado" value="1" {% if solo_vigilados %}checked{% endif %}> Solo con vigilancia 24 horas</label>
+  <button type="submit" class="boton boton-primario">Filtrar</button>
 </form>
-{% for e in items %}
-<article class="item">
-  <h2>{{ e.nombre }}</h2>
-  <p>{{ e.get_distrito_display }} · {{ e.direccion }} · {{ e.get_tipo_display }}</p>
-  <p>Capacidad: {{ e.capacidad }} · {% if e.vigilancia_24h %}Vigilancia 24 horas{% else %}Sin vigilancia permanente{% endif %} · {% if e.gratuito %}Gratuito{% else %}De pago{% endif %}</p>
-</article>
-{% empty %}<p>No hay estacionamientos con esos filtros.</p>{% endfor %}
+<div class="rejilla-3">
+  {% for e in items %}
+  <article class="tarjeta-ruta">
+    <span class="nivel {% if e.vigilancia_24h %}nivel-3{% else %}nivel-2{% endif %}">{% if e.vigilancia_24h %}Vigilancia 24 horas{% else %}Sin vigilancia permanente{% endif %}</span>
+    <h2>{{ e.nombre }}</h2>
+    <p class="trayecto"><svg class="icono"><use href="#i-ruta"/></svg> {{ e.get_distrito_display }} · {{ e.direccion }}</p>
+    <p class="datos"><span>{{ e.get_tipo_display }}</span><span>Capacidad: {{ e.capacidad }}</span><span>{% if e.gratuito %}Gratuito{% else %}De pago{% endif %}</span></p>
+  </article>
+  {% empty %}
+  <section class="vacio"><svg class="icono icono-grande"><use href="#i-estac"/></svg><p>No hay estacionamientos con esos filtros.</p></section>
+  {% endfor %}
+</div>
 {% endblock %}

@@ -37,7 +37,8 @@ INCIDENTES = [
 ESTACIONAMIENTOS = [
     ("Bicicletero municipal del parque", "miraflores", "Parque central", "publico_vigilado", 40, True, True),
     ("Centro comercial: zona de bicicletas", "san_isidro", "Zona financiera", "centro_comercial", 25, True, True),
-    ("Estación de bicicletas del corredor", "surco", "Av. principal, cuadra 10", "publico_vigilado", 30, False, True),
+    ("Estación de bicicletas del corredor", "surco", "Av. principal, cuadra 10", "publico_vigilado", 30, False,
+     True),
     ("Bicicletero universitario", "san_miguel", "Campus universitario", "privado", 60, True, True),
     ("Bicicletero de la plaza", "lima", "Plaza central", "publico_vigilado", 20, True, False),
 ]
@@ -56,7 +57,8 @@ class Command(BaseCommand):
         for tipo, distrito, descripcion, dias in INCIDENTES:
             Incidente.objects.get_or_create(
                 descripcion=descripcion,
-                defaults={"tipo": tipo, "distrito": distrito, "fecha_hecho": timezone.localdate() - timedelta(days=dias)},
+                defaults={"tipo": tipo, "distrito": distrito,
+                          "fecha_hecho": timezone.localdate() - timedelta(days=dias)},
             )
         for nombre, distrito, direccion, tipo, capacidad, vigilancia, gratis in ESTACIONAMIENTOS:
             Estacionamiento.objects.get_or_create(

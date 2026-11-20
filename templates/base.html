@@ -3,15 +3,31 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="CicloSeguro Lima: rutas ciclistas seguras, reportes de incidentes y estacionamientos para bicicletas en Lima.">
   <title>{% block titulo %}CicloSeguro Lima{% endblock %}</title>
   <link rel="stylesheet" href="{% static 'css/app.css' %}">
 </head>
 <body>
+  <svg class="sprite" hidden width="0" height="0" aria-hidden="true" focusable="false">
+    <symbol id="i-bici" viewBox="0 0 24 24"><circle cx="6" cy="16" r="4"/><circle cx="18" cy="16" r="4"/><path d="M6 16l4-8h5l3 8M10 8H8M13 8l-3 8"/></symbol>
+    <symbol id="i-ruta" viewBox="0 0 24 24"><path d="M12 21s-6-5.5-6-11a6 6 0 1 1 12 0c0 5.5-6 11-6 11z"/><circle cx="12" cy="10" r="2"/></symbol>
+    <symbol id="i-alerta" viewBox="0 0 24 24"><path d="M12 3L2 20h20L12 3z"/><path d="M12 9v5M12 17.2v.1"/></symbol>
+    <symbol id="i-estac" viewBox="0 0 24 24"><rect x="4" y="4" width="16" height="16" rx="3"/><path d="M9.5 17V7.5H13a2.8 2.8 0 0 1 0 5.6H9.5"/></symbol>
+    <symbol id="i-escudo" viewBox="0 0 24 24"><path d="M12 3l8 3v6c0 5-3.5 8-8 9-4.5-1-8-4-8-9V6l8-3z"/><path d="M8.5 12l2.5 2.5 5-5"/></symbol>
+    <symbol id="i-grafico" viewBox="0 0 24 24"><path d="M5 20V11M12 20V4M19 20v-6"/></symbol>
+    <symbol id="i-usuario" viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 21c1-4.5 4-6 8-6s7 1.5 8 6"/></symbol>
+    <symbol id="i-candado" viewBox="0 0 24 24"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></symbol>
+    <symbol id="i-flecha" viewBox="0 0 24 24"><path d="M5 12h14M13 6l6 6-6 6"/></symbol>
+    <symbol id="i-estrella" viewBox="0 0 24 24"><path d="M12 3l2.8 5.7 6.2.9-4.5 4.4 1 6.2L12 17.2 6.5 20.2l1-6.2L3 9.6l6.2-.9L12 3z"/></symbol>
+    <symbol id="i-check" viewBox="0 0 24 24"><path d="M5 12.5l4.5 4.5L19 7.5"/></symbol>
+    <symbol id="i-calendario" viewBox="0 0 24 24"><rect x="4" y="5" width="16" height="15" rx="2"/><path d="M4 10h16M9 3v4M15 3v4"/></symbol>
+  </svg>
+
   <a class="salto" href="#contenido">Ir al contenido</a>
   <header class="cabecera">
     <div class="contenedor barra">
-      <a class="marca" href="{% url 'core:inicio' %}">CicloSeguro Lima</a>
-      <nav aria-label="Principal">
+      <a class="marca" href="{% url 'core:inicio' %}"><span class="marca-logo"><svg class="icono"><use href="#i-bici"/></svg></span>CicloSeguro <strong>Lima</strong></a>
+      <nav class="menu" aria-label="Principal">
         <a href="{% url 'rutas:lista' %}">Rutas</a>
         <a href="{% url 'incidentes:lista' %}">Incidentes</a>
         <a href="{% url 'incidentes:panel' %}">Panel de riesgo</a>
@@ -19,21 +35,44 @@
       </nav>
       <div class="sesion">
         {% if user.is_authenticated %}
-          <span>{{ user.first_name|default:user.username }}</span>
+          <span class="avatar" title="{{ user.first_name|default:user.username }}">{{ user.first_name|default:user.username|slice:":1"|upper }}</span>
           <form method="post" action="{% url 'cuentas:salir' %}">{% csrf_token %}<button type="submit" class="enlace">Salir</button></form>
         {% else %}
-          <a href="{% url 'cuentas:ingresar' %}">Ingresar</a>
-          <a class="boton" href="{% url 'cuentas:registro' %}">Crear cuenta</a>
+          <a class="enlace" href="{% url 'cuentas:ingresar' %}">Ingresar</a>
+          <a class="boton boton-claro" href="{% url 'cuentas:registro' %}">Crear cuenta</a>
         {% endif %}
       </div>
     </div>
   </header>
-  <main id="contenido" class="contenedor">
-    {% if messages %}{% for m in messages %}<p class="aviso aviso-{{ m.tags }}" role="status">{{ m }}</p>{% endfor %}{% endif %}
-    {% block contenido %}{% endblock %}
+
+  {% if messages %}
+  <div class="contenedor">{% for m in messages %}<p class="aviso aviso-{{ m.tags }}" role="status"><svg class="icono"><use href="#i-check"/></svg>{{ m }}</p>{% endfor %}</div>
+  {% endif %}
+
+  <main id="contenido">
+    {% block cabecera_pagina %}{% endblock %}
+    <div class="contenedor pagina">
+      {% block contenido %}{% endblock %}
+    </div>
   </main>
-  <footer class="pie contenedor">
-    <p>Proyecto académico. Los datos de rutas, incidentes y estacionamientos son de demostración y no representan información oficial.</p>
+
+  <footer class="pie">
+    <div class="contenedor pie-grid">
+      <div>
+        <p class="pie-marca"><svg class="icono"><use href="#i-bici"/></svg> CicloSeguro Lima</p>
+        <p>Información para moverse en bicicleta con más seguridad por la ciudad.</p>
+      </div>
+      <div>
+        <p class="pie-titulo">Explorar</p>
+        <a href="{% url 'rutas:lista' %}">Rutas</a>
+        <a href="{% url 'incidentes:lista' %}">Incidentes</a>
+        <a href="{% url 'estacionamientos:lista' %}">Estacionamientos</a>
+      </div>
+      <div>
+        <p class="pie-titulo">Proyecto</p>
+        <p>Práctica Calificada 2, Proyecto Final de Carrera III, USIL. Los datos son ficticios y de demostración.</p>
+      </div>
+    </div>
   </footer>
 </body>
 </html>

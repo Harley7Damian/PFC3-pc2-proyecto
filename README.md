@@ -38,7 +38,7 @@ Ninguna clave se guarda en el repositorio.
 - Bloqueo de 15 minutos tras 5 intentos fallidos (django-axes).
 - CSRF activo, plantillas con escape automático, consultas por ORM, filtros validados contra listas cerradas.
 - Cabeceras seguras, política de contenido (CSP) sin scripts ni estilos en línea, cookies seguras, HTTPS forzado y HSTS en producción.
-- Pipeline con pruebas, cobertura, bandit, pip-audit, gitleaks, CodeQL, `check --deploy` y Dependabot.
+- Pipeline unificado de 8 etapas: gitleaks, flake8, build, pruebas con cobertura y PostgreSQL, bandit, CodeQL, pip-audit, Trivy, SBOM, `check --deploy`, puerta de calidad, despliegue, verificación de cabeceras y OWASP ZAP; además Dependabot.
 
 ## Ramas y flujo
 

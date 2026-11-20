@@ -1,0 +1,475 @@
+name: Pipeline DevSecOps
+
+# Un solo flujo con etapas encadenadas. El orden de las etapas se ve en el grafico de la ejecucion:
+# 1 Codigo -> 2 Build -> 3 Test y 4 Seguridad (en paralelo) -> 5 Puerta de calidad -> 6 Deploy -> 7 Verificacion -> 8 DAST.
+# Corre en cada pull request y push hacia test y main, y cada lunes para detectar vulnerabilidades nuevas.
+on:
+  pull_request:
+    branches: [main, test]
+  push:
+    branches: [main, test]
+  schedule:
+    - cron: "0 12 * * 1"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: pipeline-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+env:
+  PYTHON_BASE: "3.12"
+  COBERTURA_MINIMA: "80"
+  SECRET_KEY: "clave-temporal-solo-para-ci-no-usar-en-produccion"
+
+jobs:
+  # ---------------------------------------------------------------- 1. CODIGO
+  secretos:
+    name: "1 Código | Secretos (gitleaks)"
+    runs-on: ubuntu-latest
+    steps:
+      - name: Descargar el código con todo el historial
+        uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+      - name: Buscar secretos en el historial completo
+        uses: gitleaks/gitleaks-action@v3
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITLEAKS_ENABLE_COMMENTS: "false"
+
+  estilo:
+    name: "1 Código | Estilo (flake8)"
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
+        with:
+          python-version: ${{ env.PYTHON_BASE }}
+          cache: pip
+      - run: pip install flake8
+      - name: Revisar el estilo del código
+        run: flake8 . --statistics --count
+
+  revision-dependencias:
+    name: "1 Código | Revisión de dependencias del pull request"
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - name: Revisar dependencias nuevas o modificadas
+        uses: actions/dependency-review-action@v4
+        continue-on-error: true
+        with:
+          fail-on-severity: high
+
+  # ---------------------------------------------------------------- 2. BUILD
+  build:
+    name: "2 Build | Construcción y validación"
+    needs: [secretos, estilo]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
+        with:
+          python-version: ${{ env.PYTHON_BASE }}
+          cache: pip
+      - name: Instalar dependencias de producción
+        run: pip install -r requirements-prod.txt
+      - name: Verificar la configuración de Django
+        run: python manage.py check
+      - name: Verificar que no falten migraciones
+        run: python manage.py makemigrations --check --dry-run
+      - name: Recopilar archivos estáticos como en producción
+        env:
+          DEBUG: "0"
+          ALLOWED_HOSTS: ejemplo.onrender.com
+        run: python manage.py collectstatic --no-input
+      - name: Resumen
+        run: |
+          {
+            echo "### Construcción"
+            echo
+            echo "- Python ${PYTHON_BASE}, dependencias de producción instaladas"
+            echo "- check y migraciones verificados"
+            echo "- Archivos estáticos recopilados con DEBUG desactivado"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+  # ---------------------------------------------------------------- 3. TEST
+  pruebas:
+    name: "3 Test | Pruebas y cobertura (Python ${{ matrix.python }})"
+    needs: build
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python: ["3.12", "3.13"]
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
+        with:
+          python-version: ${{ matrix.python }}
+          cache: pip
+      - run: pip install -r requirements.txt coverage
+      - name: Ejecutar pruebas con medición de cobertura
+        run: coverage run manage.py test --verbosity 2
+      - name: Informe de cobertura (falla si es menor al mínimo)
+        run: |
+          coverage report -m --fail-under="${COBERTURA_MINIMA}"
+          coverage xml
+          coverage html
+      - name: Publicar la cobertura en el resumen
+        if: always()
+        run: |
+          {
+            echo "### Cobertura de pruebas (Python ${{ matrix.python }})"
+            echo
+            coverage report --format=markdown --skip-empty
+          } >> "$GITHUB_STEP_SUMMARY"
+      - name: Guardar el informe de cobertura
+        if: matrix.python == '3.12'
+        uses: actions/upload-artifact@v7
+        with:
+          name: cobertura-html
+          path: htmlcov
+
+  pruebas-postgres:
+    name: "3 Test | Pruebas de integración con PostgreSQL"
+    needs: build
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: app
+          POSTGRES_PASSWORD: app
+          POSTGRES_DB: app_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    env:
+      DATABASE_URL: postgres://app:app@localhost:5432/app_test
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
+        with:
+          python-version: ${{ env.PYTHON_BASE }}
+          cache: pip
+      - run: pip install -r requirements-prod.txt
+      - name: Aplicar migraciones y ejecutar pruebas en PostgreSQL
+        run: |
+          python manage.py migrate
+          python manage.py test
+
+  # ---------------------------------------------------------------- 4. SEGURIDAD
+  sast-bandit:
+    name: "4 Seguridad | SAST con bandit"
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
+        with:
+          python-version: ${{ env.PYTHON_BASE }}
+          cache: pip
+      - run: pip install bandit
+      - name: Analizar el código (severidad media o alta bloquea)
+        run: bandit -r . -ll -x ./.venv,./venv -f txt -o bandit.txt || (cat bandit.txt && exit 1)
+      - name: Publicar el resultado
+        if: always()
+        run: |
+          {
+            echo "### bandit"
+            echo
+            echo '```text'
+            tail -n 25 bandit.txt
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+
+  sast-codeql:
+    name: "4 Seguridad | SAST con CodeQL"
+    needs: build
+    if: github.actor != 'dependabot[bot]'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      security-events: write
+      actions: read
+    steps:
+      - uses: actions/checkout@v7
+      - uses: github/codeql-action/init@v4
+        with:
+          languages: python
+          queries: security-extended
+      - uses: github/codeql-action/analyze@v4
+        with:
+          category: "/language:python"
+
+  sca-dependencias:
+    name: "4 Seguridad | Vulnerabilidades en dependencias (pip-audit)"
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
+        with:
+          python-version: ${{ env.PYTHON_BASE }}
+          cache: pip
+      - run: pip install pip-audit
+      - name: Auditar las dependencias de producción
+        run: pip-audit -r requirements-prod.txt --format markdown | tee pip-audit.md
+      - name: Publicar el resultado
+        if: always()
+        run: |
+          {
+            echo "### pip-audit"
+            echo
+            cat pip-audit.md
+          } >> "$GITHUB_STEP_SUMMARY"
+
+  trivy:
+    name: "4 Seguridad | Trivy (dependencias, secretos y configuración)"
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      # Informativo: no bloquea mientras se estabiliza. Pasar a bloqueante quitando continue-on-error.
+      - name: Escanear el repositorio con Trivy
+        continue-on-error: true
+        run: |
+          set -o pipefail
+          docker run --rm -v "$PWD:/src" ghcr.io/aquasecurity/trivy:latest fs \
+            --scanners vuln,secret,misconfig --severity HIGH,CRITICAL --ignore-unfixed \
+            --exit-code 1 /src | tee trivy.txt
+      - name: Publicar el resultado
+        if: always()
+        run: |
+          {
+            echo "### Trivy"
+            echo
+            echo '```text'
+            tail -n 40 trivy.txt
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+
+  sbom:
+    name: "4 Seguridad | Lista de componentes (SBOM)"
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
+        with:
+          python-version: ${{ env.PYTHON_BASE }}
+          cache: pip
+      - name: Congelar las versiones instaladas de producción
+        run: |
+          pip install -r requirements-prod.txt
+          pip freeze > requirements-congelado.txt
+      - name: Generar el SBOM en formato CycloneDX
+        run: |
+          pip install cyclonedx-bom
+          cyclonedx-py requirements requirements-congelado.txt --of JSON -o sbom.cdx.json
+          python -c "import json;d=json.load(open('sbom.cdx.json'));print('Componentes:', len(d['components']))" | tee -a "$GITHUB_STEP_SUMMARY"
+      - uses: actions/upload-artifact@v7
+        with:
+          name: sbom-cyclonedx
+          path: sbom.cdx.json
+
+  django-produccion:
+    name: "4 Seguridad | Configuración de producción (check --deploy)"
+    needs: build
+    runs-on: ubuntu-latest
+    env:
+      DEBUG: "0"
+      ALLOWED_HOSTS: ejemplo.onrender.com
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
+        with:
+          python-version: ${{ env.PYTHON_BASE }}
+          cache: pip
+      - run: pip install -r requirements.txt
+      - name: Generar una clave temporal aleatoria
+        run: echo "SECRET_KEY=$(python -c 'import secrets; print(secrets.token_urlsafe(60))')" >> "$GITHUB_ENV"
+      - name: Revisar la configuración de producción
+        shell: bash
+        run: set -o pipefail && python manage.py check --deploy --fail-level WARNING 2>&1 | tee check-deploy.txt
+      - name: Publicar el resultado
+        if: always()
+        run: |
+          {
+            echo "### manage.py check --deploy"
+            echo
+            echo '```text'
+            cat check-deploy.txt
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+
+  # ---------------------------------------------------------------- 5. RELEASE
+  puerta-calidad:
+    name: "5 Release | Puerta de calidad (todas las etapas)"
+    needs: [secretos, estilo, revision-dependencias, build, pruebas, pruebas-postgres, sast-bandit, sast-codeql, sca-dependencias, trivy, sbom, django-produccion]
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - name: Evaluar el resultado de cada etapa
+        env:
+          R_SECRETOS: ${{ needs.secretos.result }}
+          R_ESTILO: ${{ needs.estilo.result }}
+          R_DEPENDENCIAS_PR: ${{ needs.revision-dependencias.result }}
+          R_BUILD: ${{ needs.build.result }}
+          R_PRUEBAS: ${{ needs.pruebas.result }}
+          R_POSTGRES: ${{ needs.pruebas-postgres.result }}
+          R_BANDIT: ${{ needs.sast-bandit.result }}
+          R_CODEQL: ${{ needs.sast-codeql.result }}
+          R_PIPAUDIT: ${{ needs.sca-dependencias.result }}
+          R_TRIVY: ${{ needs.trivy.result }}
+          R_SBOM: ${{ needs.sbom.result }}
+          R_DEPLOYCHECK: ${{ needs.django-produccion.result }}
+        run: |
+          {
+            echo "### Puerta de calidad"
+            echo
+            echo "| Etapa | Resultado |"
+            echo "| --- | --- |"
+            echo "| Secretos (gitleaks) | $R_SECRETOS |"
+            echo "| Estilo (flake8) | $R_ESTILO |"
+            echo "| Revisión de dependencias del PR | $R_DEPENDENCIAS_PR |"
+            echo "| Build | $R_BUILD |"
+            echo "| Pruebas y cobertura | $R_PRUEBAS |"
+            echo "| Pruebas con PostgreSQL | $R_POSTGRES |"
+            echo "| SAST bandit | $R_BANDIT |"
+            echo "| SAST CodeQL | $R_CODEQL |"
+            echo "| pip-audit | $R_PIPAUDIT |"
+            echo "| Trivy | $R_TRIVY |"
+            echo "| SBOM | $R_SBOM |"
+            echo "| check --deploy | $R_DEPLOYCHECK |"
+          } >> "$GITHUB_STEP_SUMMARY"
+          fallo=0
+          for r in "$R_SECRETOS" "$R_ESTILO" "$R_BUILD" "$R_PRUEBAS" "$R_POSTGRES" "$R_BANDIT" "$R_PIPAUDIT" "$R_TRIVY" "$R_SBOM" "$R_DEPLOYCHECK" "$R_DEPENDENCIAS_PR"; do
+            case "$r" in success|skipped) ;; *) fallo=1 ;; esac
+          done
+          # CodeQL se omite en los pull requests de Dependabot
+          case "$R_CODEQL" in success|skipped) ;; *) fallo=1 ;; esac
+          if [ "$fallo" -ne 0 ]; then
+            echo "Hay etapas fallidas: el cambio no puede avanzar."
+            exit 1
+          fi
+          echo "Todas las etapas obligatorias terminaron con éxito."
+
+  # ---------------------------------------------------------------- 6. DEPLOY
+  despliegue:
+    name: "6 Deploy | Render"
+    needs: puerta-calidad
+    # Solo en push a main y si se definio la variable URL_DESPLEGADA y el secreto RENDER_DEPLOY_HOOK_URL.
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push' && vars.URL_DESPLEGADA != ''
+    runs-on: ubuntu-latest
+    concurrency:
+      group: despliegue-render
+      cancel-in-progress: false
+    environment:
+      name: produccion
+      url: ${{ vars.URL_DESPLEGADA }}
+    steps:
+      - name: Solicitar a Render el despliegue del commit verificado
+        env:
+          RENDER_DEPLOY_HOOK_URL: ${{ secrets.RENDER_DEPLOY_HOOK_URL }}
+        run: |
+          if [ -z "$RENDER_DEPLOY_HOOK_URL" ]; then
+            echo "Falta el secreto RENDER_DEPLOY_HOOK_URL en el repositorio."
+            exit 1
+          fi
+          case "$RENDER_DEPLOY_HOOK_URL" in
+            *\?*) separador="&" ;;
+            *) separador="?" ;;
+          esac
+          curl -fsS -X POST "${RENDER_DEPLOY_HOOK_URL}${separador}ref=${GITHUB_SHA}" > /dev/null
+          echo "Despliegue solicitado para el commit ${GITHUB_SHA}" >> "$GITHUB_STEP_SUMMARY"
+      - name: Esperar a que la aplicación responda
+        run: |
+          sleep 45
+          for i in $(seq 1 20); do
+            respuesta=$(curl -fsSL --max-time 60 "${{ vars.URL_DESPLEGADA }}/salud/" || true)
+            echo "Intento $i: $respuesta"
+            case "$respuesta" in *'"ok"'*) echo "Aplicación disponible." >> "$GITHUB_STEP_SUMMARY"; exit 0 ;; esac
+            sleep 15
+          done
+          echo "La aplicación no respondió a tiempo."
+          exit 1
+
+  # ---------------------------------------------------------------- 7. VERIFICACION
+  verificacion-produccion:
+    name: "7 Verificación | Cabeceras de seguridad en producción"
+    needs: despliegue
+    runs-on: ubuntu-latest
+    steps:
+      - name: Comprobar cabeceras y redirección a HTTPS
+        run: |
+          url="${{ vars.URL_DESPLEGADA }}"
+          cabeceras=$(curl -fsSI --max-time 60 "$url/" | tr -d '\r' | tr 'A-Z' 'a-z')
+          echo "$cabeceras"
+          fallo=0
+          {
+            echo "### Cabeceras de seguridad en producción"
+            echo
+            echo "| Cabecera | Presente |"
+            echo "| --- | --- |"
+            for h in strict-transport-security content-security-policy x-frame-options x-content-type-options referrer-policy; do
+              if echo "$cabeceras" | grep -q "^$h:"; then echo "| $h | sí |"; else echo "| $h | NO |"; fallo=1; fi
+            done
+          } >> "$GITHUB_STEP_SUMMARY"
+          http_url="http://${url#https://}"
+          codigo=$(curl -s -o /dev/null -w '%{http_code}' --max-time 60 "$http_url/")
+          echo "Redirección de HTTP a HTTPS: $codigo" | tee -a "$GITHUB_STEP_SUMMARY"
+          case "$codigo" in 301|302|307|308) ;; *) fallo=1 ;; esac
+          exit $fallo
+
+  # ---------------------------------------------------------------- 8. DAST
+  dast-zap:
+    name: "8 DAST | OWASP ZAP sobre la aplicación desplegada"
+    needs: verificacion-produccion
+    runs-on: ubuntu-latest
+    steps:
+      - name: Preparar la carpeta de informes
+        run: mkdir -p zap && chmod 777 zap
+      - name: Despertar el servicio gratuito antes del análisis
+        run: curl -fsS --retry 5 --retry-delay 10 --max-time 90 "${{ vars.URL_DESPLEGADA }}/salud/" > /dev/null
+      # Análisis baseline (pasivo): no ataca ni modifica datos. Informativo, no bloquea el flujo.
+      - name: Ejecutar OWASP ZAP baseline
+        continue-on-error: true
+        run: |
+          docker run --rm -v "$PWD/zap:/zap/wrk/:rw" ghcr.io/zaproxy/zaproxy:stable \
+            zap-baseline.py -t "${{ vars.URL_DESPLEGADA }}" -r informe-zap.html -J informe-zap.json -I
+      - name: Resumir los hallazgos
+        if: always()
+        run: |
+          python3 - <<'PY' >> "$GITHUB_STEP_SUMMARY"
+          import json, os
+          ruta = "zap/informe-zap.json"
+          print("### OWASP ZAP (baseline)\n")
+          if not os.path.exists(ruta):
+              print("No se generó el informe.")
+          else:
+              datos = json.load(open(ruta, encoding="utf-8"))
+              conteo = {}
+              for sitio in datos.get("site", []):
+                  for alerta in sitio.get("alerts", []):
+                      riesgo = alerta.get("riskdesc", "").split(" ")[0]
+                      conteo[riesgo] = conteo.get(riesgo, 0) + 1
+              print("| Riesgo | Alertas |\n| --- | --- |")
+              for riesgo, n in sorted(conteo.items()):
+                  print("| %s | %d |" % (riesgo, n))
+          PY
+      - name: Guardar el informe de ZAP
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: informe-zap
+          path: zap

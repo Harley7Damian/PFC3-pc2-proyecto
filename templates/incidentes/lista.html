@@ -1,8 +1,10 @@
 {% extends "base.html" %}
 {% block titulo %}Incidentes | CicloSeguro Lima{% endblock %}
+{% block cabecera_pagina %}
+<section class="banner-pagina banner-rojo"><div class="contenedor"><p class="etiqueta"><svg class="icono"><use href="#i-alerta"/></svg> Comunidad</p><h1>Incidentes reportados</h1><p>Robos, accidentes y vías en mal estado informados por ciclistas.</p></div></section>
+{% endblock %}
 {% block contenido %}
-<h1>Incidentes reportados</h1>
-<p><a class="boton" href="{% url 'incidentes:nuevo' %}">Reportar un incidente</a></p>
+<div class="acciones-fila"><a class="boton boton-primario" href="{% url 'incidentes:nuevo' %}"><svg class="icono"><use href="#i-alerta"/></svg> Reportar un incidente</a></div>
 <form method="get" class="filtros">
   <label for="distrito">Distrito</label>
   <select name="distrito" id="distrito"><option value="">Todos</option>
@@ -10,13 +12,20 @@
   <label for="tipo">Tipo</label>
   <select name="tipo" id="tipo"><option value="">Todos</option>
     {% for clave, nombre in tipos %}<option value="{{ clave }}" {% if clave == tipo %}selected{% endif %}>{{ nombre }}</option>{% endfor %}</select>
-  <button type="submit" class="boton">Filtrar</button>
+  <button type="submit" class="boton boton-primario">Filtrar</button>
 </form>
-{% for i in incidentes %}
-<article class="item">
-  <h2>{{ i.get_tipo_display }} en {{ i.get_distrito_display }}</h2>
-  <p>{{ i.descripcion }}</p>
-  <p class="ayuda">Fecha del hecho: {{ i.fecha_hecho|date:"d/m/Y" }}</p>
-</article>
-{% empty %}<p>No hay incidentes con esos filtros.</p>{% endfor %}
+<div class="lista-tarjetas">
+  {% for i in incidentes %}
+  <article class="incidente tipo-{{ i.tipo }}">
+    <span class="incidente-icono"><svg class="icono"><use href="#i-alerta"/></svg></span>
+    <div>
+      <h2>{{ i.get_tipo_display }} en {{ i.get_distrito_display }}</h2>
+      <p>{{ i.descripcion }}</p>
+      <p class="ayuda"><svg class="icono"><use href="#i-calendario"/></svg> {{ i.fecha_hecho|date:"d/m/Y" }}</p>
+    </div>
+  </article>
+  {% empty %}
+  <section class="vacio"><svg class="icono icono-grande"><use href="#i-escudo"/></svg><p>No hay incidentes con esos filtros.</p></section>
+  {% endfor %}
+</div>
 {% endblock %}

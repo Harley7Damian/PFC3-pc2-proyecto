@@ -19,6 +19,18 @@ class CoreTests(TestCase):
         self.assertEqual(r.status_code, 200)
         self.assertContains(r, "CicloSeguro Lima")
 
+    def test_inicio_muestra_rutas_destacadas(self):
+        call_command("cargar_demo", stdout=StringIO())
+        r = self.client.get(reverse("core:inicio"))
+        self.assertEqual(len(r.context["rutas_destacadas"]), 3)
+        self.assertContains(r, "Rutas destacadas")
+        self.assertContains(r, "Crear cuenta gratis")
+
+    def test_inicio_para_usuario_con_sesion(self):
+        usuario = get_user_model().objects.create_user("ana@example.com", "ana@example.com", "Bicicleta-Segura-2026")
+        self.client.force_login(usuario)
+        self.assertContains(self.client.get(reverse("core:inicio")), "Reportar un incidente")
+
     def test_salud(self):
         r = self.client.get(reverse("core:salud"))
         self.assertEqual(r.status_code, 200)

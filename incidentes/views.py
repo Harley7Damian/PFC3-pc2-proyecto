@@ -72,4 +72,28 @@ def panel(request):
     maximo = datos[0]["puntos"] if datos else 1
     for d in datos:
         d["ancho"] = max(5, round(d["puntos"] * 100 / maximo))
-    return render(request, "incidentes/panel.html", {"datos": datos, "dias": DIAS_PANEL})
+    total = sum(d["total"] for d in datos)
+    por_tipo = construir_dona(desde)
+    tipo_principal = por_tipo[0]["etiqueta"] if por_tipo else ""
+    return render(request, "incidentes/panel.html", {
+        "datos": datos, "dias": DIAS_PANEL, "total": total, "por_tipo": por_tipo, "tipo_principal": tipo_principal,
+    })
+
+
+def construir_dona(desde):
+    """Segmentos del gráfico de dona por tipo. Los valores se entregan como texto con punto decimal."""
+    conteo = (
+        Incidente.objects.filter(visible=True, fecha_hecho__gte=desde)
+        .values("tipo").annotate(n=Count("id")).order_by("-n")
+    )
+    etiquetas = dict(Incidente.TIPOS)
+    total = sum(f["n"] for f in conteo)
+    segmentos, acumulado = [], 0.0
+    for f in conteo:
+        pct = f["n"] * 100 / total
+        segmentos.append({
+            "tipo": f["tipo"], "etiqueta": etiquetas.get(f["tipo"], f["tipo"]), "total": f["n"],
+            "pct": "%.2f" % pct, "resto": "%.2f" % (100 - pct), "offset": "%.2f" % (25 - acumulado),
+        })
+        acumulado += pct
+    return segmentos
