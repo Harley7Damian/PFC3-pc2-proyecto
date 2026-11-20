@@ -43,3 +43,10 @@ Ninguna clave se guarda en el repositorio.
 ## Ramas y flujo
 
 `main` es producción y se despliega automáticamente. `test` es la rama de pruebas e integración. Cada tarjeta de Jira se trabaja en una rama `feature/PCF2-N-descripcion`, con pull request hacia `test`, y `test` se integra a `main` mediante pull request.
+
+## Enlaces
+
+- Aplicación desplegada: https://pfc3-pc2-proyecto.onrender.com
+- Arquitectura lógica: [docs/ARQUITECTURA.md](docs/ARQUITECTURA.md)
+- Ciclo DevSecOps y pipeline: [docs/DEVSECOPS.md](docs/DEVSECOPS.md)
+- Planificación simulada (Gantt y burndown): carpeta `docs`
