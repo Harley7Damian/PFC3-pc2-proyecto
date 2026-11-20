@@ -55,11 +55,17 @@ jobs:
 
   revision-dependencias:
     name: "1 Código | Revisión de dependencias del pull request"
-    if: github.event_name == 'pull_request'
+    # El trabajo siempre se ejecuta (en push solo registra que no aplica). Si se omitiera completo,
+    # GitHub omitiría en cadena el despliegue, porque considera todos los trabajos anteriores.
     runs-on: ubuntu-latest
     steps:
+      - name: Informar que la revisión solo aplica a pull requests
+        if: github.event_name != 'pull_request'
+        run: echo "La revisión de dependencias nuevas solo aplica a pull requests." >> "$GITHUB_STEP_SUMMARY"
       - uses: actions/checkout@v7
+        if: github.event_name == 'pull_request'
       - name: Revisar dependencias nuevas o modificadas
+        if: github.event_name == 'pull_request'
         uses: actions/dependency-review-action@v4
         continue-on-error: true
         with:
@@ -370,7 +376,7 @@ jobs:
     needs: puerta-calidad
     # Solo en main (push o ejecucion manual). Si faltan la variable URL_DESPLEGADA o el secreto
     # RENDER_DEPLOY_HOOK_URL, el primer paso falla con un mensaje claro en lugar de omitir el trabajo en silencio.
-    if: github.ref == 'refs/heads/main' && (github.event_name == 'push' || github.event_name == 'workflow_dispatch')
+    if: ${{ !cancelled() && needs.puerta-calidad.result == 'success' && github.ref == 'refs/heads/main' && (github.event_name == 'push' || github.event_name == 'workflow_dispatch') }}
     runs-on: ubuntu-latest
     concurrency:
       group: despliegue-render
@@ -418,6 +424,7 @@ jobs:
   verificacion-produccion:
     name: "7 Verificación | Cabeceras de seguridad en producción"
     needs: despliegue
+    if: ${{ !cancelled() && needs.despliegue.result == 'success' }}
     runs-on: ubuntu-latest
     steps:
       - name: Comprobar cabeceras y redirección a HTTPS
@@ -445,6 +452,7 @@ jobs:
   dast-zap:
     name: "8 DAST | OWASP ZAP sobre la aplicación desplegada"
     needs: verificacion-produccion
+    if: ${{ !cancelled() && needs.verificacion-produccion.result == 'success' }}
     runs-on: ubuntu-latest
     steps:
       - name: Preparar la carpeta de informes
