@@ -368,8 +368,9 @@ jobs:
   despliegue:
     name: "6 Deploy | Render"
     needs: puerta-calidad
-    # Solo en push a main y si se definio la variable URL_DESPLEGADA y el secreto RENDER_DEPLOY_HOOK_URL.
-    if: github.ref == 'refs/heads/main' && github.event_name == 'push' && vars.URL_DESPLEGADA != ''
+    # Solo en main (push o ejecucion manual). Si faltan la variable URL_DESPLEGADA o el secreto
+    # RENDER_DEPLOY_HOOK_URL, el primer paso falla con un mensaje claro en lugar de omitir el trabajo en silencio.
+    if: github.ref == 'refs/heads/main' && (github.event_name == 'push' || github.event_name == 'workflow_dispatch')
     runs-on: ubuntu-latest
     concurrency:
       group: despliegue-render
@@ -378,6 +379,15 @@ jobs:
       name: produccion
       url: ${{ vars.URL_DESPLEGADA }}
     steps:
+      - name: Comprobar la configuración de despliegue
+        env:
+          URL_DESPLEGADA: ${{ vars.URL_DESPLEGADA }}
+        run: |
+          if [ -z "$URL_DESPLEGADA" ]; then
+            echo "Falta la variable de repositorio URL_DESPLEGADA (Settings, Secrets and variables, Actions, Variables)."
+            exit 1
+          fi
+          echo "URL a desplegar: $URL_DESPLEGADA"
       - name: Solicitar a Render el despliegue del commit verificado
         env:
           RENDER_DEPLOY_HOOK_URL: ${{ secrets.RENDER_DEPLOY_HOOK_URL }}
