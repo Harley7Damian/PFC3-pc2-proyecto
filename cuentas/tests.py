@@ -27,8 +27,8 @@ class RegistroTests(TestCase):
 
     def test_correos_invalidos_son_rechazados(self):
         malos = ["", "ana", "ana@", "@example.com", "ana@example", "ana@@example.com", "ana example@x.com",
-                 "ana@example..com", "ana@-.com", "<script>alert(1)</script>@x.com", "ana@x.com'; DROP TABLE auth_user;--",
-                 "a" * 70 + "@example.com", "ana@example.c"]
+                 "ana@example..com", "ana@-.com", "<script>alert(1)</script>@x.com",
+                 "ana@x.com'; DROP TABLE auth_user;--", "a" * 70 + "@example.com", "ana@example.c"]
         for correo in malos:
             with self.subTest(correo=correo):
                 r = self.client.post(reverse("cuentas:registro"), datos_registro(correo=correo))
