@@ -1,0 +1,21 @@
+{% extends "base.html" %}
+{% block titulo %}{{ ruta.nombre }} | CicloSeguro Lima{% endblock %}
+{% block contenido %}
+<h1>{{ ruta.nombre }}</h1>
+<p>{{ ruta.get_distrito_origen_display }} a {{ ruta.get_distrito_destino_display }} · {{ ruta.longitud_km }} km · {{ ruta.get_estado_ciclovia_display }}</p>
+<p><span class="nivel nivel-{{ ruta.nivel_seguridad }}">Nivel de seguridad: {{ ruta.etiqueta_nivel }}</span>
+  {% if ruta.puntaje_promedio %}Puntaje de usuarios: {{ ruta.puntaje_promedio|floatformat:1 }} de 5{% else %}Aún sin calificaciones{% endif %}</p>
+<p>{{ ruta.descripcion }}</p>
+<h2>Calificar esta ruta</h2>
+{% if user.is_authenticated %}
+<form method="post" action="{% url 'rutas:calificar' ruta.pk %}" class="formulario" novalidate>
+  {% csrf_token %}
+  {% for campo in formulario %}
+  <p><label for="{{ campo.id_for_label }}">{{ campo.label }}</label> {{ campo }}{% for e in campo.errors %}<span class="error">{{ e }}</span>{% endfor %}</p>
+  {% endfor %}
+  <button type="submit" class="boton">Enviar calificación</button>
+</form>
+{% else %}<p><a href="{% url 'cuentas:ingresar' %}?next={{ request.path }}">Ingrese</a> para calificar.</p>{% endif %}
+<h2>Comentarios recientes</h2>
+{% for c in calificaciones %}<p><strong>{{ c.puntaje }}/5</strong> {{ c.comentario }}</p>{% empty %}<p>Todavía no hay comentarios.</p>{% endfor %}
+{% endblock %}

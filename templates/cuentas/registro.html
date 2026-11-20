@@ -1,0 +1,18 @@
+{% extends "base.html" %}
+{% block titulo %}Crear cuenta | CicloSeguro Lima{% endblock %}
+{% block contenido %}
+<h1>Crear cuenta</h1>
+<form method="post" class="formulario" novalidate>
+  {% csrf_token %}
+  {% for campo in formulario %}
+    <p>
+      <label for="{{ campo.id_for_label }}">{{ campo.label }}</label>
+      {{ campo }}
+      {% for error in campo.errors %}<span class="error">{{ error }}</span>{% endfor %}
+    </p>
+  {% endfor %}
+  <p class="ayuda">La contraseña debe tener al menos 10 caracteres, no ser común ni solo numérica.</p>
+  <button type="submit" class="boton">Crear cuenta</button>
+</form>
+<p>¿Ya tiene cuenta? <a href="{% url 'cuentas:ingresar' %}">Ingrese</a>.</p>
+{% endblock %}

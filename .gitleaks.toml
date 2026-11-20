@@ -1,0 +1,17 @@
+title = "Reglas de gitleaks del proyecto"
+
+[extend]
+useDefault = true
+
+# Solo valores ficticios y documentados. Cada excepcion se agrega despues de revisar el hallazgo.
+[allowlist]
+description = "Valores ficticios documentados (CI, desarrollo local y pruebas)"
+regexes = [
+  '''clave-temporal-solo-para-ci-no-usar-en-produccion''',
+  '''clave-solo-para-desarrollo-local''',
+  '''postgres(ql)?://app:app@localhost''',
+  '''Bicicleta-Segura-2026''',
+  '''Clave-Incorrecta-9''',
+  '''Clave-De-Prueba-Admin-77''',
+  '''Otra-Clave-Distinta-1''',
+]

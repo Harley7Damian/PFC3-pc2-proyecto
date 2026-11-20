@@ -1,0 +1,12 @@
+{% extends "base.html" %}
+{% block titulo %}Reportar incidente | CicloSeguro Lima{% endblock %}
+{% block contenido %}
+<h1>Reportar un incidente</h1>
+<form method="post" class="formulario" novalidate>
+  {% csrf_token %}
+  {% for campo in formulario %}
+  <p><label for="{{ campo.id_for_label }}">{{ campo.label }}</label> {{ campo }}{% for e in campo.errors %}<span class="error">{{ e }}</span>{% endfor %}</p>
+  {% endfor %}
+  <button type="submit" class="boton">Enviar reporte</button>
+</form>
+{% endblock %}
