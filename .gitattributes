@@ -1,0 +1,4 @@
+# Evita avisos y diffs enormes por saltos de linea entre Windows y Linux
+* text=auto eol=lf
+*.sh text eol=lf
+*.bat text eol=crlf
