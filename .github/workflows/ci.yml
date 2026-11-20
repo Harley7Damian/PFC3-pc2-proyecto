@@ -1,0 +1,139 @@
+name: CI
+
+# Etapas: pruebas, calidad (cobertura), seguridad (dependencias y código), PostgreSQL y despliegue a Render.
+# Corre en pull requests y pushes hacia test y main. El despliegue solo ocurre en main.
+on:
+  pull_request:
+    branches: [main, test]
+  push:
+    branches: [main, test]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  COBERTURA_MINIMA: "80"
+
+jobs:
+  pruebas:
+    name: Pruebas (Python 3.12)
+    runs-on: ubuntu-latest
+    env:
+      SECRET_KEY: "clave-temporal-solo-para-ci-no-usar-en-produccion"
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.12"
+          cache: pip
+      - name: Instalar dependencias
+        run: pip install -r requirements.txt
+      - name: Verificar configuracion de Django
+        run: python manage.py check
+      - name: Verificar que no falten migraciones
+        run: python manage.py makemigrations --check --dry-run
+      - name: Ejecutar pruebas automaticas
+        run: python manage.py test
+
+  calidad:
+    name: Calidad de codigo (coverage y flake8)
+    runs-on: ubuntu-latest
+    env:
+      SECRET_KEY: "clave-temporal-solo-para-ci-no-usar-en-produccion"
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.12"
+          cache: pip
+      - name: Instalar dependencias
+        run: pip install -r requirements.txt coverage flake8
+      - name: Medir cobertura de pruebas
+        run: |
+          coverage run manage.py test
+          coverage report -m --fail-under=${COBERTURA_MINIMA}
+      - name: Revisar estilo (no bloquea)
+        run: flake8 .
+        continue-on-error: true
+
+  seguridad:
+    name: Seguridad (dependencias y codigo)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.12"
+          cache: pip
+      - name: Instalar las herramientas de seguridad
+        run: pip install pip-audit bandit
+      - name: Revisar vulnerabilidades conocidas en las dependencias
+        run: pip-audit -r requirements.txt
+      - name: Revisar el codigo en busca de patrones inseguros (severidad media o alta)
+        run: bandit -r . -ll -x ./.venv,./venv
+
+  pruebas-postgres:
+    name: Pruebas contra PostgreSQL
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: app
+          POSTGRES_PASSWORD: app
+          POSTGRES_DB: app_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    env:
+      DATABASE_URL: postgres://app:app@localhost:5432/app_test
+      SECRET_KEY: "clave-temporal-solo-para-ci-no-usar-en-produccion"
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.12"
+          cache: pip
+      - name: Instalar dependencias, incluyendo el driver de PostgreSQL
+        run: pip install -r requirements.txt -r requirements-prod.txt
+      - name: Ejecutar pruebas contra PostgreSQL
+        run: python manage.py test
+
+  despliegue:
+    name: Despliegue a Render
+    needs: [pruebas, calidad, seguridad]
+    # Solo si se definio la variable del repositorio URL_DESPLEGADA y el secreto RENDER_DEPLOY_HOOK_URL.
+    # Solo en main y nunca en pull requests.
+    if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request' && vars.URL_DESPLEGADA != ''
+    runs-on: ubuntu-latest
+    concurrency:
+      group: despliegue-render
+      cancel-in-progress: false
+    environment:
+      name: produccion
+      url: ${{ vars.URL_DESPLEGADA }}
+    steps:
+      - name: Solicitar a Render el despliegue del commit verificado
+        env:
+          RENDER_DEPLOY_HOOK_URL: ${{ secrets.RENDER_DEPLOY_HOOK_URL }}
+        run: |
+          if [ -z "$RENDER_DEPLOY_HOOK_URL" ]; then
+            echo "Falta el secreto RENDER_DEPLOY_HOOK_URL en el repositorio."
+            exit 1
+          fi
+          case "$RENDER_DEPLOY_HOOK_URL" in
+            *\?*) separador="&" ;;
+            *) separador="?" ;;
+          esac
+          curl -fsS -X POST "${RENDER_DEPLOY_HOOK_URL}${separador}ref=${GITHUB_SHA}"
+          echo "Despliegue solicitado. Commit: ${GITHUB_SHA}" >> "$GITHUB_STEP_SUMMARY"
+      - name: Comprobar que la aplicacion responde
+        run: |
+          sleep 60
+          curl -fsSL --retry 10 --retry-delay 15 --retry-all-errors --max-time 60 \
+            -o /dev/null -w "Codigo HTTP final: %{http_code}\n" "${{ vars.URL_DESPLEGADA }}/"

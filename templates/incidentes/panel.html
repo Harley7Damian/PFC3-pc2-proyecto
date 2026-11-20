@@ -1,0 +1,13 @@
+{% extends "base.html" %}
+{% block titulo %}Panel de riesgo | CicloSeguro Lima{% endblock %}
+{% block contenido %}
+<h1>Panel de riesgo por distrito</h1>
+<p>Últimos {{ dias }} días. Robos y accidentes suman 3 puntos; los demás incidentes, 1 punto.</p>
+{% for d in datos %}
+<div class="barra-riesgo">
+  <span class="etiqueta">{{ d.distrito }}</span>
+  <progress class="riesgo-{{ d.clase }}" max="100" value="{{ d.ancho }}">{{ d.puntos }}</progress>
+  <span>{{ d.puntos }} puntos · {{ d.total }} reportes · {{ d.etiqueta }}</span>
+</div>
+{% empty %}<p>No hay incidentes recientes.</p>{% endfor %}
+{% endblock %}

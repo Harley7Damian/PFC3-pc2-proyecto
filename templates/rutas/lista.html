@@ -1,0 +1,20 @@
+{% extends "base.html" %}
+{% block titulo %}Rutas | CicloSeguro Lima{% endblock %}
+{% block contenido %}
+<h1>Rutas ciclistas</h1>
+<form method="get" class="filtros">
+  <label for="distrito">Distrito</label>
+  <select name="distrito" id="distrito">
+    <option value="">Todos</option>
+    {% for clave, nombre in distritos %}<option value="{{ clave }}" {% if clave == distrito %}selected{% endif %}>{{ nombre }}</option>{% endfor %}
+  </select>
+  <button type="submit" class="boton">Filtrar</button>
+</form>
+{% for r in rutas %}
+<article class="item">
+  <h2><a href="{% url 'rutas:detalle' r.pk %}">{{ r.nombre }}</a></h2>
+  <p>{{ r.get_distrito_origen_display }} a {{ r.get_distrito_destino_display }} · {{ r.longitud_km }} km · {{ r.get_estado_ciclovia_display }}</p>
+  <p><span class="nivel nivel-{{ r.nivel_seguridad }}">{{ r.etiqueta_nivel }}</span></p>
+</article>
+{% empty %}<p>No hay rutas para ese distrito.</p>{% endfor %}
+{% endblock %}

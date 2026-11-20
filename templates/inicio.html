@@ -1,0 +1,13 @@
+{% extends "base.html" %}
+{% block contenido %}
+<section class="portada">
+  <h1>Muévete en bicicleta por Lima con más información</h1>
+  <p>Consulta rutas ciclistas, reporta incidentes y encuentra estacionamientos seguros para tu bicicleta.</p>
+  <p><a class="boton" href="{% url 'rutas:lista' %}">Ver rutas</a> <a class="boton secundario" href="{% url 'incidentes:panel' %}">Ver panel de riesgo</a></p>
+</section>
+<section class="tarjetas">
+  <a class="tarjeta" href="{% url 'rutas:lista' %}"><strong>{{ total_rutas }}</strong><span>rutas ciclistas</span></a>
+  <a class="tarjeta" href="{% url 'incidentes:lista' %}"><strong>{{ total_incidentes }}</strong><span>incidentes reportados</span></a>
+  <a class="tarjeta" href="{% url 'estacionamientos:lista' %}"><strong>{{ total_estacionamientos }}</strong><span>estacionamientos seguros</span></a>
+</section>
+{% endblock %}

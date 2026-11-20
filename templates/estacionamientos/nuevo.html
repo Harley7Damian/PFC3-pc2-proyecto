@@ -1,0 +1,13 @@
+{% extends "base.html" %}
+{% block titulo %}Registrar estacionamiento | CicloSeguro Lima{% endblock %}
+{% block contenido %}
+<h1>Registrar un estacionamiento</h1>
+<p class="ayuda">Los registros se publican después de ser revisados por la administración.</p>
+<form method="post" class="formulario" novalidate>
+  {% csrf_token %}
+  {% for campo in formulario %}
+  <p><label for="{{ campo.id_for_label }}">{{ campo.label }}</label> {{ campo }}{% for e in campo.errors %}<span class="error">{{ e }}</span>{% endfor %}</p>
+  {% endfor %}
+  <button type="submit" class="boton">Enviar registro</button>
+</form>
+{% endblock %}

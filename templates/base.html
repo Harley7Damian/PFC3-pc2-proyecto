@@ -1,0 +1,39 @@
+{% load static %}<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block titulo %}CicloSeguro Lima{% endblock %}</title>
+  <link rel="stylesheet" href="{% static 'css/app.css' %}">
+</head>
+<body>
+  <a class="salto" href="#contenido">Ir al contenido</a>
+  <header class="cabecera">
+    <div class="contenedor barra">
+      <a class="marca" href="{% url 'core:inicio' %}">CicloSeguro Lima</a>
+      <nav aria-label="Principal">
+        <a href="{% url 'rutas:lista' %}">Rutas</a>
+        <a href="{% url 'incidentes:lista' %}">Incidentes</a>
+        <a href="{% url 'incidentes:panel' %}">Panel de riesgo</a>
+        <a href="{% url 'estacionamientos:lista' %}">Estacionamientos</a>
+      </nav>
+      <div class="sesion">
+        {% if user.is_authenticated %}
+          <span>{{ user.first_name|default:user.username }}</span>
+          <form method="post" action="{% url 'cuentas:salir' %}">{% csrf_token %}<button type="submit" class="enlace">Salir</button></form>
+        {% else %}
+          <a href="{% url 'cuentas:ingresar' %}">Ingresar</a>
+          <a class="boton" href="{% url 'cuentas:registro' %}">Crear cuenta</a>
+        {% endif %}
+      </div>
+    </div>
+  </header>
+  <main id="contenido" class="contenedor">
+    {% if messages %}{% for m in messages %}<p class="aviso aviso-{{ m.tags }}" role="status">{{ m }}</p>{% endfor %}{% endif %}
+    {% block contenido %}{% endblock %}
+  </main>
+  <footer class="pie contenedor">
+    <p>Proyecto académico. Los datos de rutas, incidentes y estacionamientos son de demostración y no representan información oficial.</p>
+  </footer>
+</body>
+</html>
