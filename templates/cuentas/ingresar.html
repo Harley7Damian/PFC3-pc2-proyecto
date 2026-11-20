@@ -1,0 +1,16 @@
+{% extends "base.html" %}
+{% block titulo %}Ingresar | CicloSeguro Lima{% endblock %}
+{% block contenido %}
+<h1>Ingresar</h1>
+<form method="post" class="formulario" novalidate>
+  {% csrf_token %}
+  {{ form.non_field_errors }}
+  <p><label for="{{ form.username.id_for_label }}">Correo electrónico</label>
+    <input type="email" name="username" id="{{ form.username.id_for_label }}" maxlength="254" autocomplete="username" required></p>
+  <p><label for="{{ form.password.id_for_label }}">Contraseña</label>
+    <input type="password" name="password" id="{{ form.password.id_for_label }}" autocomplete="current-password" required></p>
+  <input type="hidden" name="next" value="{{ next }}">
+  <button type="submit" class="boton">Ingresar</button>
+</form>
+<p>¿No tiene cuenta? <a href="{% url 'cuentas:registro' %}">Cree una</a>.</p>
+{% endblock %}
